@@ -1,10 +1,14 @@
+import axios from "axios";
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 
 const Chatbox = ({ diseaseData, isChatboxOpen, handleCloseChatbox }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [currentMessage, setCurrentMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Update chatMessages whenever diseaseData changes
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://192.168.0.75:5000";
+
   useEffect(() => {
     if (diseaseData) {
       setChatMessages([
@@ -16,17 +20,29 @@ const Chatbox = ({ diseaseData, isChatboxOpen, handleCloseChatbox }) => {
     }
   }, [diseaseData]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (currentMessage.trim()) {
-      // Mock response (You can integrate with an API here)
-      const mockResponse = `This is a placeholder response for "${currentMessage}".`;
+      try {
+        setIsLoading(true); // Set loading state to true
+        // Send the user's question to the backend
+        const response = await axios.post(
+          `${backendUrl}/ask`,
+          { query: currentMessage }
+        );
+        console.log("Response from Chat API:", response);
 
-      setChatMessages((prevMessages) => [
-        ...prevMessages,
-        { question: currentMessage, answer: mockResponse },
-      ]);
-
-      setCurrentMessage("");
+        // Add the question and backend's response to the chat messages
+        setChatMessages((prevMessages) => [
+          ...prevMessages,
+          { question: currentMessage, answer: response.data.response || "No answer available" },
+        ]);
+        setCurrentMessage("");
+      } catch (error) {
+        console.error("Error during chat:", error.response || error.message);
+        toast.error(error.response?.data?.response || error.message);
+      } finally {
+        setIsLoading(false); // Reset loading state
+      }
     }
   };
 
@@ -74,8 +90,13 @@ const Chatbox = ({ diseaseData, isChatboxOpen, handleCloseChatbox }) => {
               <button
                 onClick={handleSendMessage}
                 className="text-black px-5 py-2 border-b hover:text-cyan-700 hover:scale-110 rounded-md transition"
+                disabled={isLoading} // Disable button while loading
               >
-                <i className="fa-regular fa-paper-plane fa-lg"></i>
+                {isLoading ? (
+                  <i className="fa-solid fa-spinner animate-spin"></i> // Loading spinner
+                ) : (
+                  <i className="fa-regular fa-paper-plane fa-lg"></i>
+                )}
               </button>
             </div>
           </div>

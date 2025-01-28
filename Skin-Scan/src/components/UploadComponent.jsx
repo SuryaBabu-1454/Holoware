@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-import DiseaseInfo from "./DiseaseInfo";
+import axios from 'axios';
+import { toast } from "react-toastify";
 
-const UploadComponent = ({ setDiseaseData, handleOpenChatbox }) => {
+const UploadComponent = ({ setDiseaseData }) => {
   const [previewImage, setPreviewImage] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -34,22 +38,50 @@ const UploadComponent = ({ setDiseaseData, handleOpenChatbox }) => {
     setPreviewImage(null);
     setDiseaseData(null);
     document.getElementById("fileInput").value = "";
+    setErrorMessage(""); // Reset error message when removing image
   };
 
-  const analyzeImage = (imageUrl) => {
+  const analyzeImage = async (imageUrl) => {
     setIsAnalyzing(true);
-
-    setTimeout(() => {
-      setDiseaseData({
-        name: "ECZEMA",
-        description:
-          "Eczema is a condition that causes the skin to become itchy, red, and inflamed. It can occur at any age and may be triggered by allergens or irritants.",
-        images: [imageUrl],
+    setErrorMessage(""); // Reset error message before each request
+  
+    try {
+      // Prepare the image file for upload
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      // Send the image to the backend
+      const response = await axios.post('http://192.168.0.75:5000/predict', formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
+  
+      // Handle backend response
+      if (response.data.error) {
+        setErrorMessage(response.data.error);
+        toast.error(response.data.error || "An error occurred during analysis.");
+      } else {
+        const diseaseDataInfo = {
+          name: response.data.predicted_class,
+          images: [imageUrl],
+          description: "No detailed description provided.",
+        };
+        setDiseaseData(diseaseDataInfo);
+      }
+
       setPreviewImage(null);
+    } catch (error) {
+      console.error("Error analyzing image:", error.response?.data || error);
+      setErrorMessage(error.response?.data?.error || "An error occurred during analysis.");
+      toast.error(error.response?.data?.error || "An error occurred during analysis.");
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
+  
 
   return (
     <div>
@@ -96,6 +128,11 @@ const UploadComponent = ({ setDiseaseData, handleOpenChatbox }) => {
       {isAnalyzing && (
         <p className="text-blue-500 font-semibold text-center mt-4">
           Analyzing image...
+        </p>
+      )}
+      {errorMessage && (
+        <p className="text-red-500 font-semibold text-center mt-4">
+          Error: {errorMessage}
         </p>
       )}
     </div>

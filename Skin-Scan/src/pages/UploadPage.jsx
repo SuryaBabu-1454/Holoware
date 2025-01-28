@@ -20,10 +20,13 @@ const UploadPage = () => {
     <div className="w-3/4 mx-auto mb-10">
       <HowItWorks />
       <UploadComponent setDiseaseData={setDiseaseData} />
+      { diseaseData && (
       <DiseaseInfo
         diseaseData={diseaseData}
         handleOpenChatbox={handleOpenChatbox}
+    
       />
+    )}
       <Chatbox
         diseaseData={diseaseData}
         isChatboxOpen={isChatboxOpen}
